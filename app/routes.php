@@ -36,85 +36,7 @@ $app->get('/buku', function (Request $request, Response $response) {
 
     return $response->withHeader("Content-Type", "application/json");
 });
-                ]
-            ));
-        } else {
-            $response->getBody()->write(json_encode(
-                [
-                    'message' => 'Buku dengan ID ' . $currentId . ' telah dihapus dari database'
-                ]
-            ));
-        }
-    } catch (PDOException $e) {
-        $response = $response->withStatus(500);
-        $response->getBody()->write(json_encode(
-            [
-                'message' => 'Database error ' . $e->getMessage()
-            ]
-        ));
-    }
-
-    return $response->withHeader("Content-Type", "application/json");
-});
-
-
-
-
-
-    // $app->get('/buku', function (Request $request, Response $response) {
-    //     $db = $this->get(PDO::class);
-
-    //     $query = $db->query('SELECT * FROM buku');
-    //     $results = $query->fetchAll(PDO::FETCH_ASSOC);
-    //     $response->getBody()->write(json_encode($results));
-
-    //     return $response->withHeader("Content-Type", "application/json");
-    // });
-
-
-    // // getby id
-    // $app->get('/buku/{id_Buku}', function (Request $request, Response $response, $args) {
-    //     $db = $this->get(PDO::class);
-
-    //     $query = $db->prepare('SELECT * FROM buku WHERE id_Buku=?');
-    //     $query->execute([$args['id_Buku']]);
-    //     $results = $query->fetchAll(PDO::FETCH_ASSOC);
-    //     $response->getBody()->write(json_encode($results[0]));
-
-    //     return $response->withHeader("Content-Type", "application/json");
-    // });
-    
-    // $app->post('/buku', function (Request $request, Response $response) {
-    //     $parsedBody = $request->getParsedBody();
-
-    //     $id = $parsedBody["id_Buku"];
-    //     $judul = $parsedBody["Judul"];
-    //     // $penulis = $parsedBody["penulis"];
-    //     // $jenis = $parsedBody["jenis"];
-    //     // $ISBN = $parsedBody["ISBN"];
-    //     // $Tahun_Terbit = $parsedBody["Tahun_Terbit"];
-    //     // $Harga = $parsedBody["Harga"];
-    //     // $Stock = $parsedBody["Stock"];
-
-    //     $db = $this->get(PDO::class);
-    //     $query = $db->prepare('INSERT INTO buku (id_Buku, Judul) VALUES (:id_Buku, :Judul)');
-    //     $query->execute([
-    //         ':id_Buku' => $id,
-    //         ':Judul' => $judul,
-    //         // ':model' => $model,
-    //         // ':harga' => $harga,
-    //         // ':stock' => $stock
-    //     ]);
-
-    //     $response->getBody()->write(json_encode(
-    //         [
-    //             'message' => 'Data produk berhasil ditambahkan'
-    //         ]
-    //     ));
-    //     return $response->withHeader("Content-Type", "application/json");
-    // });
-};
-
+          
 // post data
 $app->post('/buku', function (Request $request, Response $response) {
     $parsedBody = $request->getParsedBody();
@@ -178,17 +100,76 @@ $app->put('/buku/{id_Buku}', function (Request $request, Response $response, $ar
 
 //delete
 $app->delete('/buku/{id_Buku}', function (Request $request, Response $response, $args) {
-    $currentId = $args['id_Buku'];
     $db = $this->get(PDO::class);
+    $idBuku = $args['id_Buku'];
 
-    try {
-        // Membuat panggilan ke stored procedure DeleteBuku
-        $query = $db->prepare('CALL DeleteBuku(:idBuku)');
-        $query->bindParam(':idBuku', $currentId, PDO::PARAM_INT);
-        $query->execute();
+    $query = $db->prepare('CALL DeleteBuku(:idBuku)');
+    $query->bindParam(':idBuku', $idBuku, PDO::PARAM_INT);
 
-        if ($query->rowCount() === 0) {
-            $response = $response->withStatus(404);
-            $response->getBody()->write(json_encode(
-                [
-                    'message' => 'Data buku tidak ditemukan'
+    $query->execute();
+
+    $response->getBody()->write(json_encode(
+        [
+            'message' => 'Buku dengan ID ' . $idBuku . ' berhasil dihapus.'
+        ]
+    ));
+
+    return $response->withHeader("Content-Type", "application/json");
+});
+
+
+
+
+    // $app->get('/buku', function (Request $request, Response $response) {
+    //     $db = $this->get(PDO::class);
+
+    //     $query = $db->query('SELECT * FROM buku');
+    //     $results = $query->fetchAll(PDO::FETCH_ASSOC);
+    //     $response->getBody()->write(json_encode($results));
+
+    //     return $response->withHeader("Content-Type", "application/json");
+    // });
+
+
+    // // getby id
+    // $app->get('/buku/{id_Buku}', function (Request $request, Response $response, $args) {
+    //     $db = $this->get(PDO::class);
+
+    //     $query = $db->prepare('SELECT * FROM buku WHERE id_Buku=?');
+    //     $query->execute([$args['id_Buku']]);
+    //     $results = $query->fetchAll(PDO::FETCH_ASSOC);
+    //     $response->getBody()->write(json_encode($results[0]));
+
+    //     return $response->withHeader("Content-Type", "application/json");
+    // });
+    
+    // $app->post('/buku', function (Request $request, Response $response) {
+    //     $parsedBody = $request->getParsedBody();
+
+    //     $id = $parsedBody["id_Buku"];
+    //     $judul = $parsedBody["Judul"];
+    //     // $penulis = $parsedBody["penulis"];
+    //     // $jenis = $parsedBody["jenis"];
+    //     // $ISBN = $parsedBody["ISBN"];
+    //     // $Tahun_Terbit = $parsedBody["Tahun_Terbit"];
+    //     // $Harga = $parsedBody["Harga"];
+    //     // $Stock = $parsedBody["Stock"];
+
+    //     $db = $this->get(PDO::class);
+    //     $query = $db->prepare('INSERT INTO buku (id_Buku, Judul) VALUES (:id_Buku, :Judul)');
+    //     $query->execute([
+    //         ':id_Buku' => $id,
+    //         ':Judul' => $judul,
+    //         // ':model' => $model,
+    //         // ':harga' => $harga,
+    //         // ':stock' => $stock
+    //     ]);
+
+    //     $response->getBody()->write(json_encode(
+    //         [
+    //             'message' => 'Data produk berhasil ditambahkan'
+    //         ]
+    //     ));
+    //     return $response->withHeader("Content-Type", "application/json");
+    // });
+};
