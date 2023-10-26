@@ -224,63 +224,114 @@ $app->delete('/pembeli/{id_Pembeli}', function (Request $request, Response $resp
     return $response->withHeader("Content-Type", "application/json");
 });
 
+//  tabel ulasan
+$app->get('/ulasan', function (Request $request, Response $response) {
+    $db = $this->get(PDO::class);
+
+    $query = $db->query('CALL SelectSemuaUlasan()');
+    $results = $query->fetchAll(PDO::FETCH_ASSOC);
+    $response->getBody()->write(json_encode($results));
+
+    return $response->withHeader("Content-Type", "application/json");
+});
+
+// get berdasarkan id 
+$app->get('/ulasan/{id_Ulasan}', function (Request $request, Response $response, $args) {
+    $db = $this->get(PDO::class);
+
+    $query = $db->prepare('CALL SelectUlasanById(:id_Ulasan)');
+
+    $query->bindParam(':id_Ulasan', $args['id_Ulasan'], PDO::PARAM_INT);
+
+    $query->execute();
+
+    $results = $query->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!empty($results)) {
+        $response->getBody()->write(json_encode($results[0]));
+    } else {
+        // Handle the case where no results were found, return an appropriate response.
+        $response = $response->withStatus(404); // Not Found
+        $response->getBody()->write(json_encode(["message" => "Ulasan not found"]));
+    }
+
+    return $response->withHeader("Content-Type", "application/json");
+});
+
+//  delete ulasan berdasarkan id
+$app->delete('/ulasan/{id_Ulasan}', function (Request $request, Response $response, $args) {
+    $db = $this->get(PDO::class);
+    $id_Ulasan = $args['id_Ulasan'];
+
+    $query = $db->prepare('CALL DeleteUlasan(:id_Ulasan)');
+    $query->bindParam(':id_Ulasan', $id_Ulasan, PDO::PARAM_INT);
+
+    $query->execute();
+
+    $response->getBody()->write(json_encode(
+        [
+            'message' => 'Ulasan dengan ID ' . $id_Ulasan . ' berhasil dihapus.'
+        ]
+    ));
+
+    return $response->withHeader("Content-Type", "application/json");
+});
+
+// update isi ulasan berdasarkan id
+$app->put('/ulasan/{id_Ulasan}', function (Request $request, Response $response, $args) {
+    $parsedBody = $request->getParsedBody();
+    $isi_Ulasan = $parsedBody["isi_Ulasan"];
+    $rating = $parsedBody["rating"];
+
+    $db = $this->get(PDO::class);
+
+    $query = $db->prepare('CALL UpdateUlasan(:id_Ulasan, :isi_Ulasan, :rating)');
+
+    $query->bindParam(':id_Ulasan', $args['id_Ulasan'], PDO::PARAM_INT);
+    $query->bindParam(':isi_Ulasan', $isi_Ulasan, PDO::PARAM_STR);
+    $query->bindParam(':rating', $rating, PDO::PARAM_INT);
+
+    $query->execute();
+
+    $response->getBody()->write(json_encode(
+        [
+            'message' => 'Ulasan dengan ID ' . $args['id_Ulasan'] . ' berhasil diperbarui.'
+        ]
+    ));
+
+    return $response->withHeader("Content-Type", "application/json");
+});
+
+// creeate ulasan
+$app->post('/ulasan', function (Request $request, Response $response) {
+    $parsedBody = $request->getParsedBody();
+
+    $id_Pembeli = $parsedBody["id_Pembeli"];
+    $id_Buku = $parsedBody["id_Buku"];
+    $isi_Ulasan = $parsedBody["isi_Ulasan"];
+    $rating = $parsedBody["rating"];
+
+    $db = $this->get(PDO::class);
+
+    // Membuat panggilan ke stored procedure CreateUlasan
+    $query = $db->prepare('CALL CreateUlasan(:id_Pembeli, :id_Buku, :isi_Ulasan, :rating)');
+    $query->bindParam(':id_Pembeli', $id_Pembeli, PDO::PARAM_INT);
+    $query->bindParam(':id_Buku', $id_Buku, PDO::PARAM_INT);
+    $query->bindParam(':isi_Ulasan', $isi_Ulasan, PDO::PARAM_STR);
+    $query->bindParam(':rating', $rating, PDO::PARAM_INT);
+
+    $query->execute();
+
+    $response->getBody()->write(json_encode(
+        [
+            'message' => 'Ulasan berhasil ditambahkan'
+        ]
+    ));
+
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus(201); // Status 201 Created
+});
 
 
-
-
-
-
-
-    // $app->get('/buku', function (Request $request, Response $response) {
-    //     $db = $this->get(PDO::class);
-
-    //     $query = $db->query('SELECT * FROM buku');
-    //     $results = $query->fetchAll(PDO::FETCH_ASSOC);
-    //     $response->getBody()->write(json_encode($results));
-
-    //     return $response->withHeader("Content-Type", "application/json");
-    // });
-
-
-    // // getby id
-    // $app->get('/buku/{id_Buku}', function (Request $request, Response $response, $args) {
-    //     $db = $this->get(PDO::class);
-
-    //     $query = $db->prepare('SELECT * FROM buku WHERE id_Buku=?');
-    //     $query->execute([$args['id_Buku']]);
-    //     $results = $query->fetchAll(PDO::FETCH_ASSOC);
-    //     $response->getBody()->write(json_encode($results[0]));
-
-    //     return $response->withHeader("Content-Type", "application/json");
-    // });
-    
-    // $app->post('/buku', function (Request $request, Response $response) {
-    //     $parsedBody = $request->getParsedBody();
-
-    //     $id = $parsedBody["id_Buku"];
-    //     $judul = $parsedBody["Judul"];
-    //     // $penulis = $parsedBody["penulis"];
-    //     // $jenis = $parsedBody["jenis"];
-    //     // $ISBN = $parsedBody["ISBN"];
-    //     // $Tahun_Terbit = $parsedBody["Tahun_Terbit"];
-    //     // $Harga = $parsedBody["Harga"];
-    //     // $Stock = $parsedBody["Stock"];
-
-    //     $db = $this->get(PDO::class);
-    //     $query = $db->prepare('INSERT INTO buku (id_Buku, Judul) VALUES (:id_Buku, :Judul)');
-    //     $query->execute([
-    //         ':id_Buku' => $id,
-    //         ':Judul' => $judul,
-    //         // ':model' => $model,
-    //         // ':harga' => $harga,
-    //         // ':stock' => $stock
-    //     ]);
-
-    //     $response->getBody()->write(json_encode(
-    //         [
-    //             'message' => 'Data produk berhasil ditambahkan'
-    //         ]
-    //     ));
-    //     return $response->withHeader("Content-Type", "application/json");
-    // });
 };
