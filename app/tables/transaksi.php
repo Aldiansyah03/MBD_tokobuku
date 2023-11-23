@@ -56,16 +56,14 @@ $app->put('/transaksi/{id_Transaksi}', function (Request $request, Response $res
     $parsedBody = $request->getParsedBody();
     $tanggal_Transaksi = $parsedBody["tanggal_Transaksi"];
     $metode_Pembayaran = $parsedBody["metode_Pembayaran"];
-    $total_Harga = $parsedBody["total_Harga"];
 
     $db = $this->get(PDO::class);
 
-    $query = $db->prepare('CALL PerbaruiTransaksi(:p_Id_Transaksi, :p_Tanggal_Transaksi, :p_Metode_Pembayaran, :p_Total_Harga)');
+    $query = $db->prepare('CALL PerbaruiTransaksi(:p_Id_Transaksi, :p_Tanggal_Transaksi, :p_Metode_Pembayaran)');
 
     $query->bindParam(':p_Id_Transaksi', $args['id_Transaksi'], PDO::PARAM_INT);
     $query->bindParam(':p_Tanggal_Transaksi', $tanggal_Transaksi, PDO::PARAM_STR);
     $query->bindParam(':p_Metode_Pembayaran', $metode_Pembayaran, PDO::PARAM_STR);
-    $query->bindParam(':p_Total_Harga', $total_Harga, PDO::PARAM_INT);
 
     $query->execute();
 
@@ -84,28 +82,38 @@ $app->post('/transaksi', function (Request $request, Response $response) {
     $id_Pembeli = $parsedBody["id_Pembeli"];
     $tanggal_Transaksi = $parsedBody["tanggal_Transaksi"];
     $metode_Pembayaran = $parsedBody["metode_Pembayaran"];
-    $total_Harga = $parsedBody["total_Harga"];
 
     $db = $this->get(PDO::class);
 
-    $query = $db->prepare('CALL TambahTransaksi(:p_Id_Pembeli, :p_Tanggal_Transaksi, :p_Metode_Pembayaran, :p_Total_Harga)');
+    $query = $db->prepare('CALL TambahTransaksi(:p_Id_Pembeli, :p_Tanggal_Transaksi, :p_Metode_Pembayaran)');
     $query->bindParam(':p_Id_Pembeli', $id_Pembeli, PDO::PARAM_INT);
     $query->bindParam(':p_Tanggal_Transaksi', $tanggal_Transaksi, PDO::PARAM_STR);
     $query->bindParam(':p_Metode_Pembayaran', $metode_Pembayaran, PDO::PARAM_STR);
-    $query->bindParam(':p_Total_Harga', $total_Harga, PDO::PARAM_INT);
 
-    $query->execute();
+    try {
+        $query->execute();
 
-    $response->getBody()->write(json_encode(
-        [
-            'message' => 'Transaksi berhasil ditambahkan'
-        ]
-    ));
+        $response->getBody()->write(json_encode(
+            [
+                'message' => 'Transaksi berhasil ditambahkan'
+            ]
+        ));
 
-    return $response
-        ->withHeader('Content-Type', 'application/json')
-        ->withStatus(201); // Status 201 Created
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withStatus(201); // Status 201 Created
+    } catch (PDOException $e) {
+        // Handle exceptions, you might want to log or provide a different response
+        $response->getBody()->write(json_encode(
+            [
+                'error' => 'Error adding transaction: ' . $e->getMessage()
+            ]
+        ));
+
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withStatus(500); // Status 500 Internal Server Error
+    }
 });
-
 
 ?>

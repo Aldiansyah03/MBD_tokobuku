@@ -53,22 +53,32 @@ $app->delete('/detailTransaksi/{id_Detail_Transaksi}', function (Request $reques
 $app->put('/detailTransaksi/{id_Detail_Transaksi}', function (Request $request, Response $response, $args) {
     $parsedBody = $request->getParsedBody();
 
-    // Pastikan kunci 'jumlah_Beli' dan 'subtotal' ada sebelum mengaksesnya
+    // Ensure the 'jumlah_Beli' and 'subtotal' keys exist before accessing them
     if (isset($parsedBody["jumlah_Beli"], $parsedBody["subtotal"])) {
         $jumlah_Beli = $parsedBody["jumlah_Beli"];
         $subtotal = $parsedBody["subtotal"];
 
+        // Assuming $db is your PDO instance
         $db = $this->get(PDO::class);
 
-        $query = $db->prepare('CALL PerbaruiDetailTransaksi(:p_Id_Detail_Transaksi, :p_Jumlah_Beli, :p_Subtotal)');
+        // Begin transaction
+        $db->beginTransaction();
 
+        // Use a prepared statement to call the stored procedure
+        $query = $db->prepare('CALL UpdateDetailTransaksiJumlahSubtotalById(:p_Id_Detail_Transaksi, :p_Jumlah_Beli, :p_Subtotal)');
+
+        // Bind parameters
         $query->bindParam(':p_Id_Detail_Transaksi', $args['id_Detail_Transaksi'], PDO::PARAM_INT);
         $query->bindParam(':p_Jumlah_Beli', $jumlah_Beli, PDO::PARAM_INT);
         $query->bindParam(':p_Subtotal', $subtotal, PDO::PARAM_STR);
 
-        // Lakukan penanganan kesalahan untuk eksekusi query
+        // Handle errors during query execution
         try {
+            // Execute the stored procedure
             $query->execute();
+
+            // Commit the transaction only if the execution is successful
+            $db->commit();
 
             $response->getBody()->write(json_encode(
                 [
@@ -76,7 +86,10 @@ $app->put('/detailTransaksi/{id_Detail_Transaksi}', function (Request $request, 
                 ]
             ));
         } catch (PDOException $e) {
-            // Tangani kesalahan yang terkait dengan database
+            // Roll back the transaction in case of an error
+            $db->rollBack();
+
+            // Handle database-related errors
             $response->getBody()->write(json_encode(
                 [
                     'error' => 'Gagal memperbarui detail transaksi: ' . $e->getMessage()
@@ -84,7 +97,7 @@ $app->put('/detailTransaksi/{id_Detail_Transaksi}', function (Request $request, 
             ));
         }
     } else {
-        // Tangani jika kunci tidak tersedia dalam permintaan
+        // Handle if keys are not available in the request
         $response->getBody()->write(json_encode(
             [
                 'error' => 'Kunci "jumlah_Beli" atau "subtotal" tidak tersedia dalam permintaan.'
@@ -102,33 +115,41 @@ $app->post('/detailTransaksi', function (Request $request, Response $response) {
     $id_Transaksi = $parsedBody["id_Transaksi"];
     $id_Buku = $parsedBody["id_Buku"];
     $jumlah_Beli = $parsedBody["jumlah_Beli"];
-   
+    $subtotal = $parsedBody["subtotal"];
 
     $db = $this->get(PDO::class);
 
-    // Prepare statement untuk memanggil stored procedure
-    $query = $db->prepare('CALL TambahDetailTransaksi(:p_Id_Transaksi, :p_Id_Buku, :p_Jumlah_Beli, :p_Subtotal)');
-
-    // Bind parameter
+    $query = $db->prepare('CALL InsertDetailTransaksi(:p_Id_Transaksi, :p_Id_Buku, :p_Jumlah_Beli, :p_Subtotal)');
     $query->bindParam(':p_Id_Transaksi', $id_Transaksi, PDO::PARAM_INT);
     $query->bindParam(':p_Id_Buku', $id_Buku, PDO::PARAM_INT);
     $query->bindParam(':p_Jumlah_Beli', $jumlah_Beli, PDO::PARAM_INT);
+    $query->bindParam(':p_Subtotal', $subtotal, PDO::PARAM_STR);
 
+    try {
+        $query->execute();
 
-    // Eksekusi statement
-    $query->execute();
+        $response->getBody()->write(json_encode(
+            [
+                'message' => 'Detail transaksi berhasil ditambahkan'
+            ]
+        ));
 
-    $response->getBody()->write(json_encode(
-        [
-            'message' => 'Detail transaksi berhasil ditambahkan'
-        ]
-    ));
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withStatus(201); // Status 201 Created
+    } catch (PDOException $e) {
+        // Handle exceptions, you might want to log or provide a different response
+        $response->getBody()->write(json_encode(
+            [
+                'error' => 'Error adding detail transaksi: ' . $e->getMessage()
+            ]
+        ));
 
-    return $response
-        ->withHeader('Content-Type', 'application/json')
-        ->withStatus(201); // Status 201 Created
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withStatus(500); // Status 500 Internal Server Error
+    }
 });
-
 
 
 
