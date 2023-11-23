@@ -12,7 +12,7 @@ $app->get('/detailTransaksi', function (Request $request, Response $response) {
     return $response->withHeader("Content-Type", "application/json");
 });
 
-$app->get('/detail_transaksi/{id_Detail_Transaksi}', function (Request $request, Response $response, $args) {
+$app->get('/detailTransaksi/{id_Detail_Transaksi}', function (Request $request, Response $response, $args) {
     $db = $this->get(PDO::class);
 
     $query = $db->prepare('CALL detailTransaksiById(:id_Detail_Transaksi)');
@@ -32,7 +32,7 @@ $app->get('/detail_transaksi/{id_Detail_Transaksi}', function (Request $request,
     return $response->withHeader("Content-Type", "application/json");
 });
 
-$app->delete('/detail_transaksi/{id_Detail_Transaksi}', function (Request $request, Response $response, $args) {
+$app->delete('/detailTransaksi/{id_Detail_Transaksi}', function (Request $request, Response $response, $args) {
     $db = $this->get(PDO::class);
     $id_Detail_Transaksi = $args['id_Detail_Transaksi'];
 
@@ -50,46 +50,72 @@ $app->delete('/detail_transaksi/{id_Detail_Transaksi}', function (Request $reque
     return $response->withHeader("Content-Type", "application/json");
 });
 
-$app->put('/detail_transaksi/{id_Detail_Transaksi}', function (Request $request, Response $response, $args) {
+$app->put('/detailTransaksi/{id_Detail_Transaksi}', function (Request $request, Response $response, $args) {
     $parsedBody = $request->getParsedBody();
-    $jumlah_Beli = $parsedBody["jumlah_Beli"];
-    $subtotal = $parsedBody["subtotal"];
 
-    $db = $this->get(PDO::class);
+    // Pastikan kunci 'jumlah_Beli' dan 'subtotal' ada sebelum mengaksesnya
+    if (isset($parsedBody["jumlah_Beli"], $parsedBody["subtotal"])) {
+        $jumlah_Beli = $parsedBody["jumlah_Beli"];
+        $subtotal = $parsedBody["subtotal"];
 
-    $query = $db->prepare('CALL PerbaruiDetailTransaksi(:p_Id_Detail_Transaksi, :p_Jumlah_Beli, :p_Subtotal)');
+        $db = $this->get(PDO::class);
 
-    $query->bindParam(':p_Id_Detail_Transaksi', $args['id_Detail_Transaksi'], PDO::PARAM_INT);
-    $query->bindParam(':p_Jumlah_Beli', $jumlah_Beli, PDO::PARAM_INT);
-    $query->bindParam(':p_Subtotal', $subtotal, PDO::PARAM_STR);
+        $query = $db->prepare('CALL PerbaruiDetailTransaksi(:p_Id_Detail_Transaksi, :p_Jumlah_Beli, :p_Subtotal)');
 
-    $query->execute();
+        $query->bindParam(':p_Id_Detail_Transaksi', $args['id_Detail_Transaksi'], PDO::PARAM_INT);
+        $query->bindParam(':p_Jumlah_Beli', $jumlah_Beli, PDO::PARAM_INT);
+        $query->bindParam(':p_Subtotal', $subtotal, PDO::PARAM_STR);
 
-    $response->getBody()->write(json_encode(
-        [
-            'message' => 'Detail transaksi dengan ID ' . $args['id_Detail_Transaksi'] . ' berhasil diperbarui.'
-        ]
-    ));
+        // Lakukan penanganan kesalahan untuk eksekusi query
+        try {
+            $query->execute();
 
-    return $response->withHeader("Content-Type", "application/json");
+            $response->getBody()->write(json_encode(
+                [
+                    'message' => 'Detail transaksi dengan ID ' . $args['id_Detail_Transaksi'] . ' berhasil diperbarui.'
+                ]
+            ));
+        } catch (PDOException $e) {
+            // Tangani kesalahan yang terkait dengan database
+            $response->getBody()->write(json_encode(
+                [
+                    'error' => 'Gagal memperbarui detail transaksi: ' . $e->getMessage()
+                ]
+            ));
+        }
+    } else {
+        // Tangani jika kunci tidak tersedia dalam permintaan
+        $response->getBody()->write(json_encode(
+            [
+                'error' => 'Kunci "jumlah_Beli" atau "subtotal" tidak tersedia dalam permintaan.'
+            ]
+        ));
+    }
+
+    return $response->withHeader('Content-Type', 'application/json');
 });
 
-$app->post('/detail-transaksi', function (Request $request, Response $response) {
+
+$app->post('/detailTransaksi', function (Request $request, Response $response) {
     $parsedBody = $request->getParsedBody();
 
     $id_Transaksi = $parsedBody["id_Transaksi"];
     $id_Buku = $parsedBody["id_Buku"];
     $jumlah_Beli = $parsedBody["jumlah_Beli"];
-    $subtotal = $parsedBody["subtotal"];
+   
 
     $db = $this->get(PDO::class);
 
+    // Prepare statement untuk memanggil stored procedure
     $query = $db->prepare('CALL TambahDetailTransaksi(:p_Id_Transaksi, :p_Id_Buku, :p_Jumlah_Beli, :p_Subtotal)');
+
+    // Bind parameter
     $query->bindParam(':p_Id_Transaksi', $id_Transaksi, PDO::PARAM_INT);
     $query->bindParam(':p_Id_Buku', $id_Buku, PDO::PARAM_INT);
     $query->bindParam(':p_Jumlah_Beli', $jumlah_Beli, PDO::PARAM_INT);
-    $query->bindParam(':p_Subtotal', $subtotal, PDO::PARAM_INT);
 
+
+    // Eksekusi statement
     $query->execute();
 
     $response->getBody()->write(json_encode(
